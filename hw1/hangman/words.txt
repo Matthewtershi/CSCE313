@@ -1,0 +1,10 @@
+borrowed
+ownership
+lifetime
+reference
+compiler
+vector
+pointer
+thread
+process
+kernel
