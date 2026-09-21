@@ -19,7 +19,7 @@ fn main() {
 //     let s1 = String::from("hello");
 //     let mut v = Vec::new();
 //     v.push(s1);
-//     let s2: String = v[0];
+//     let s2: String = v[0].clone(); strings are not copyable by default
 //     println!("{}", s2);
 // }
 // Indexing a vector gives you access to the value, but it does not let you move it out the vector. You would need to use a reference to the value instead.

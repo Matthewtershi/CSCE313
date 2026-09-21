@@ -1,0 +1,74 @@
+#!/usr/bin/env bash
+
+check_availability()
+{
+        if ! type $1 2>&1 >/dev/null ; then
+                echo "Please install $1 before running this autograder"
+                exit
+        fi
+}
+
+check_availability gcc
+check_availability valgrind
+check_availability make
+
+cleanup()
+{
+        if [ -f Makefile ]; then
+                make clean -sj
+        fi
+        rm -f output correct_output valgrind_out
+}
+
+ORANGE='\033[0;33m'
+GREEN='\033[0;32m'
+RED='\033[0;31m'
+NC='\033[0m'
+
+# Variables for storing results
+SCORE=0
+RESULTS_FILE="/autograder/results/results.json"
+
+echo -e "\nTesting :: Compilation (34 points)\n"
+make clean -j
+rm -f output correct_output
+timeout -k 0 1m make -j
+if [ $? -eq 0 ]; then
+        echo -e "       ${GREEN}Compilation Test Passed${NC}"
+        SCORE=$(($SCORE+34))
+else
+        echo -e "  ${RED}Failed${NC}"
+        write_json_and_exit
+fi
+
+echo -e "\nTesting :: Correct Output (33 points)\n"
+ls -al / | tr a-z A-Z | grep -v "PROC$" > correct_output
+timeout -k 0 1m ./shell.opt 2>/dev/null | grep -v "PROC$" > output
+if diff -q correct_output output > /dev/null; then
+        echo -e "       ${GREEN}Output matches${NC}"
+        SCORE=$(($SCORE+33))
+else
+        echo -e "  ${RED}Output doesn't match${NC}"
+        echo -e "  ${GREEN}Expected output${NC}"
+        cat correct_output
+        echo -e "  ${GREEN}Got${NC}"
+        cat output
+fi
+
+echo -e "\nTesting :: Memory Leaks (33 points)\n"
+timeout -k 0 10m valgrind --leak-check=full --show-leak-kinds=all --track-origins=yes --verbose --error-exitcode=100 --log-file=valgrind_out ./shell.opt 2>&1 > /dev/null
+if [ $? -eq 0 ] && ! grep -q "Invalid free() / delete / delete\[\] / realloc()" valgrind_out ; then
+        echo -e "       ${GREEN}No leaks detected${NC}"
+        SCORE=$(($SCORE+33))
+else
+        echo -e "  ${RED}Memory Leaks detected${NC}"
+fi
+
+echo ""
+echo ""
+echo -e "${ORANGE}====================================${NC}"
+echo -e "Net Score: ${GREEN}$SCORE/100.0${NC}"
+echo -e "${ORANGE}====================================${NC}"
+echo ""
+
+cleanup
